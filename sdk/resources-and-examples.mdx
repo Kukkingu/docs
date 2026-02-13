@@ -1,0 +1,255 @@
+---
+title: "Resources and examples"
+description: "Reference for every SDK method, including CRUD, ordering endpoints, invoice lifecycle actions, and common workflows."
+---
+
+This page covers all resource APIs exposed by `createContractingSdkClient`.
+
+## Quick method map
+
+| Resource | Methods |
+| --- | --- |
+| `addresses` | `list`, `one`, `post`, `put`, `patch`, `delete`, `order` |
+| `billables` | `list`, `one`, `post`, `put`, `patch`, `delete`, `order` |
+| `clients` | `list`, `one`, `post`, `put`, `patch`, `delete`, `order` |
+| `contacts` | `list`, `one`, `post`, `put`, `patch`, `delete`, `order` |
+| `contracts` | `list`, `one`, `post`, `put`, `patch`, `delete`, `order` |
+| `emails` | `list`, `one`, `post`, `put`, `patch`, `delete`, `order` |
+| `health` | `status` |
+| `invoices` | `list`, `one`, `pdf`, `finalize`, `void`, `post`, `put`, `patch`, `delete` |
+| `projects` | `list`, `one`, `post`, `put`, `patch`, `delete`, `order` |
+| `tenants` | `list`, `one`, `post`, `put`, `patch`, `delete` |
+| `timeEntries` | `list`, `one`, `post`, `put`, `patch`, `delete` |
+| `users` | `me` |
+
+## Common CRUD patterns
+
+Use this pattern for most resources.
+
+```ts
+const created = await sdk.clients.post({
+  name: "Acme",
+  description: "Primary client",
+});
+
+const list = await sdk.clients.list();
+const one = await sdk.clients.one(created.data.id);
+
+await sdk.clients.patch(created.data.id, {
+  description: "Updated",
+});
+
+await sdk.clients.delete(created.data.id);
+```
+
+## Resources with `expand`
+
+### `addresses`
+
+- Query filters: `contactId`
+- Expand values: `contact`, `contact.client`
+
+```ts
+await sdk.addresses.list({
+  query: { contactId: "con_123" },
+  expand: ["contact.client"],
+});
+```
+
+### `billables`
+
+- Query filters: `invoiceId`
+- Expand values: `invoice`, `invoice.contract`, `invoice.contract.client`
+
+```ts
+await sdk.billables.list({
+  query: { invoiceId: "inv_123" },
+  expand: ["invoice.contract.client"],
+});
+```
+
+### `contacts`
+
+- Query filters: `clientId`
+- Expand values: `client`, `emails`, `addresses`
+
+```ts
+await sdk.contacts.list({
+  query: { clientId: "clnt_123" },
+  expand: ["emails", "addresses"],
+});
+```
+
+### `contracts`
+
+- Query filters: `clientId`
+- Expand values: `client`
+
+```ts
+await sdk.contracts.list({
+  query: { clientId: "clnt_123" },
+  expand: "client",
+});
+```
+
+### `emails`
+
+- Query filters: `contactId`
+- Expand values: `contact`, `contact.client`
+
+```ts
+await sdk.emails.list({
+  query: { contactId: "con_123" },
+  expand: ["contact.client"],
+});
+```
+
+### `invoices`
+
+- Query filters: `contractId`, `status`
+- Expand values: `contract`, `contract.client`
+- Status values: `DRAFT`, `FINALIZED`, `VOID`
+
+```ts
+await sdk.invoices.list({
+  query: { contractId: "ctr_123", status: "FINALIZED" },
+  expand: ["contract.client"],
+});
+```
+
+### `projects`
+
+- Query filters: `contractId`
+- Expand values: `contract`, `contract.client`
+
+```ts
+await sdk.projects.list({
+  query: { contractId: "ctr_123" },
+  expand: "contract.client",
+});
+```
+
+### `timeEntries`
+
+- Query filters: `projectId`, `billableId`, `dateFrom`, `dateTo`, `referenceSource`, `referenceId`
+- Expand values:
+  - `project`
+  - `project.contract`
+  - `project.contract.client`
+  - `billable`
+  - `billable.invoice`
+  - `billable.invoice.contract`
+  - `billable.invoice.contract.client`
+
+```ts
+await sdk.timeEntries.list({
+  query: {
+    projectId: "prj_123",
+    dateFrom: "2025-01-01T00:00:00.000Z",
+    dateTo: "2025-01-31T23:59:59.999Z",
+    referenceSource: "JIRA",
+    referenceId: "ENG-204",
+  },
+  expand: ["project.contract.client", "billable.invoice.contract.client"],
+});
+```
+
+## Resources without `expand`
+
+### `clients`
+
+```ts
+await sdk.clients.list();
+await sdk.clients.one("clnt_123");
+```
+
+### `tenants`
+
+- Query filter: `search`
+
+```ts
+await sdk.tenants.list({
+  query: { search: "primary" },
+});
+```
+
+## Specialized operations
+
+### Reorder records
+
+Use `order` methods for manual ordering in UI workflows.
+
+```ts
+await sdk.clients.order(["clnt_3", "clnt_1", "clnt_2"]);
+await sdk.contracts.order("clnt_123", ["ctr_3", "ctr_1", "ctr_2"]);
+await sdk.projects.order("ctr_123", ["prj_3", "prj_1", "prj_2"]);
+await sdk.contacts.order("clnt_123", ["con_3", "con_1", "con_2"]);
+await sdk.addresses.order("con_123", ["adr_3", "adr_1", "adr_2"]);
+await sdk.emails.order("con_123", ["eml_3", "eml_1", "eml_2"]);
+await sdk.billables.order("inv_123", ["bil_3", "bil_1", "bil_2"]);
+```
+
+### Invoice lifecycle
+
+```ts
+const invoice = await sdk.invoices.post({
+  contractId: "ctr_123",
+  invoiceNumber: "INV-2026-0003",
+  exchangeRate: 1,
+  currencyCode: "EUR",
+  amountMinor: 250000,
+});
+
+await sdk.invoices.finalize(invoice.data.id);
+await sdk.invoices.pdf(invoice.data.id);
+await sdk.invoices.void(invoice.data.id);
+```
+
+### Project creation signature
+
+`projects.post` takes `contractId` as the first argument, then the remaining payload.
+
+```ts
+await sdk.projects.post("ctr_123", {
+  name: "Website redesign",
+  description: "Phase 1 scope",
+});
+```
+
+### Current user and health
+
+```ts
+const me = await sdk.users.me();
+const status = await sdk.health.status();
+```
+
+## End-to-end scenario
+
+Create a client, contract, project, and invoice in one flow.
+
+```ts
+const client = await sdk.clients.post({
+  name: "Northwind",
+});
+
+const contract = await sdk.contracts.post({
+  clientId: client.data.id,
+  name: "2026 advisory",
+  amountMinor: 1200000,
+  currencyCode: "USD",
+});
+
+const project = await sdk.projects.post(contract.data.id, {
+  name: "Discovery sprint",
+});
+
+const invoice = await sdk.invoices.post({
+  contractId: contract.data.id,
+  invoiceNumber: "INV-2026-0101",
+  exchangeRate: 1,
+  currencyCode: "USD",
+  amountMinor: 120000,
+});
+
+await sdk.invoices.finalize(invoice.data.id);
+```

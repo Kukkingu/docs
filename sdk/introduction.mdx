@@ -1,0 +1,39 @@
+---
+title: "Contracting SDK overview"
+description: "Use the TypeScript SDK to call Contracting API endpoints with typed methods and request validation."
+---
+
+Use `@kukkingu/contracting-sdk` to call the Contracting API with typed helpers.
+
+## What you get
+
+- A single client factory: `createContractingSdkClient`
+- Typed resource methods for:
+  - `addresses`
+  - `billables`
+  - `clients`
+  - `contacts`
+  - `contracts`
+  - `emails`
+  - `health`
+  - `invoices`
+  - `projects`
+  - `tenants`
+  - `timeEntries`
+  - `users`
+- Request body validation through Zod before network calls
+- Standardized errors: `ApiClientError` and `ApiClientValidationError`
+
+## Core behavior
+
+- The default API base URL is `https://api.contracting.kukkingu.software/api/v1`.
+- You can set global `tenantId` and `token` when you create the client.
+- You can override `tenantId`, `token`, `headers`, `query`, and `signal` per request.
+- Most endpoints return `{ data: ... }`. The SDK unwraps this to `response.data`.
+
+## Next steps
+
+1. Configure your client in [Client setup](/sdk/client-setup).
+2. Learn request options and error handling in [Request options and errors](/sdk/request-options-and-errors).
+3. Copy endpoint usage from [Resources and examples](/sdk/resources-and-examples).
+

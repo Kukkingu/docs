@@ -1,0 +1,124 @@
+---
+title: "Request options and errors"
+description: "Control auth, tenant context, headers, query, cancellation, and error handling."
+---
+
+## Per request options
+
+Every SDK method accepts request options.
+
+```ts
+const controller = new AbortController();
+
+const response = await sdk.contacts.list({
+  headers: { "x-trace-id": "req-1" },
+  query: { clientId: "clnt_123" },
+  expand: ["emails", "addresses"],
+  tenantId: "tnt_override",
+  token: async () => getFreshToken(),
+  signal: controller.signal,
+});
+```
+
+## Authentication behavior
+
+- If you set `token`, the SDK adds `authorization: Bearer <token>`.
+- If you pass an explicit `Authorization` header, the SDK keeps your header.
+- You can override token per request.
+
+```ts
+await sdk.clients.list({
+  token: "one-off-token",
+});
+
+await sdk.clients.list({
+  headers: {
+    Authorization: "Basic my-static-value",
+  },
+});
+```
+
+## Tenant scoping behavior
+
+- Tenant header key is `tenant-id`.
+- If you set `tenantId` on the client, it applies to every request.
+- If you set `tenantId` on a request, it overrides the client value.
+
+```ts
+await sdk.projects.list({ tenantId: "tnt_customer_a" });
+await sdk.projects.list({ tenantId: "tnt_customer_b" });
+```
+
+## Expand behavior
+
+For resources that support `expand`, you can pass one value or an array.
+
+```ts
+await sdk.invoices.one("inv_123", { expand: "contract" });
+
+await sdk.timeEntries.list({
+  expand: ["project.contract.client", "billable.invoice.contract"],
+});
+```
+
+The SDK serializes array values as comma-separated strings.
+
+## Direct request helper
+
+Use `sdk.request` when you need a low-level call.
+
+```ts
+const raw = await sdk.request<{ status: string }>({
+  method: "GET",
+  path: "/health",
+});
+
+console.log(raw.status);
+console.log(raw.data);
+```
+
+## Validation errors
+
+For methods that validate request bodies, invalid payloads fail before any HTTP call.
+
+```ts
+import { ApiClientValidationError } from "@kukkingu/contracting-sdk";
+
+try {
+  await sdk.clients.post({ name: "" });
+} catch (error) {
+  if (error instanceof ApiClientValidationError) {
+    console.error(error.status); // 400
+    console.error(error.details); // [{ field, message, constraint }]
+  }
+}
+```
+
+## API errors
+
+Non-2xx responses throw `ApiClientError`.
+
+```ts
+import { ApiClientError } from "@kukkingu/contracting-sdk";
+
+try {
+  await sdk.clients.one("clnt_missing");
+} catch (error) {
+  if (error instanceof ApiClientError) {
+    console.error(error.status);
+    console.error(error.request.method, error.request.url);
+    console.error(error.body);
+  }
+}
+```
+
+## Response shape
+
+Each successful call returns:
+
+- `status`
+- `ok` (always `true` for resolved calls)
+- `headers`
+- `body` (raw parsed body)
+- `data` (unwrapped from `{ data: ... }` when present)
+

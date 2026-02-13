@@ -48,6 +48,20 @@
         ]
       },
       {
+        "tab": "SDK",
+        "groups": [
+          {
+            "group": "Contracting SDK",
+            "pages": [
+              "sdk/introduction",
+              "sdk/client-setup",
+              "sdk/request-options-and-errors",
+              "sdk/resources-and-examples"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "API reference",
         "openapi": "https://api.contracting.kukkingu.software/api/v1/docs.json"
       }

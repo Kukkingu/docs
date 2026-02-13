@@ -1,0 +1,76 @@
+---
+title: "Client setup"
+description: "Install the SDK and create a client with token, tenant context, and optional fetch implementation."
+---
+
+## Install
+
+```bash
+npm install @kukkingu/contracting-sdk
+```
+
+## Create a client
+
+```ts
+import { createContractingSdkClient } from "@kukkingu/contracting-sdk";
+
+const sdk = createContractingSdkClient({
+  baseUrl: "https://api.contracting.kukkingu.software/api/v1",
+  tenantId: "tnt_123",
+  token: process.env.CONTRACTING_API_TOKEN,
+});
+```
+
+## Use a token provider
+
+Use a function when your token can expire.
+
+```ts
+const sdk = createContractingSdkClient({
+  tenantId: "tnt_123",
+  token: async () => {
+    return await getFreshToken();
+  },
+});
+```
+
+## Use custom headers by default
+
+```ts
+const sdk = createContractingSdkClient({
+  tenantId: "tnt_123",
+  token: process.env.CONTRACTING_API_TOKEN,
+  defaultHeaders: {
+    "x-trace-id": "docs-example",
+  },
+});
+```
+
+## Node.js fetch notes
+
+The SDK uses `globalThis.fetch` by default.
+
+- On Node.js versions with native fetch, you do not need extra setup.
+- If your runtime has no global fetch, pass one:
+
+```ts
+import fetch from "node-fetch";
+
+const sdk = createContractingSdkClient({
+  fetch: fetch as unknown as typeof globalThis.fetch,
+  token: process.env.CONTRACTING_API_TOKEN,
+});
+```
+
+## Your first calls
+
+```ts
+const me = await sdk.users.me();
+const health = await sdk.health.status();
+const clients = await sdk.clients.list();
+
+console.log(me.data);
+console.log(health.data);
+console.log(clients.data);
+```
+
